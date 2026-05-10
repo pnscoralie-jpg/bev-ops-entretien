@@ -1,0 +1,15 @@
+{
+  "name": "bev-ops-entretien",
+  "version": "1.0.0",
+  "description": "bev-ops · Interface de conduite d'entretien",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
