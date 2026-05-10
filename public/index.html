@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bev-ops · Entretien</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ivory: #F7F3EE; --black: #1A1A18; --black-soft: #2E2E2A;
+      --copper: #C4956A; --copper-dim: #C4956A18;
+      --gray: #8A8680; --gray-light: #C8C4BF;
+      --dark: #1A1A18; --dark-card: #242420; --dark-border: #3A3A36;
+      --green: #6BCB8B;
+    }
+    html, body { height: 100%; font-family: "DM Sans", sans-serif; background: var(--ivory); color: var(--black); -webkit-font-smoothing: antialiased; }
+    .screen { min-height: 100vh; display: none; flex-direction: column; padding: 3rem 2rem; opacity: 0; transform: translateY(8px); transition: opacity 0.4s ease, transform 0.4s ease; }
+    .screen.active { display: flex; }
+    .screen.visible { opacity: 1; transform: translateY(0); }
+    .inner { max-width: 760px; width: 100%; margin: 0 auto; flex: 1; display: flex; flex-direction: column; }
+    .label { font-size: 0.7rem; letter-spacing: 0.2em; color: var(--copper); text-transform: uppercase; font-weight: 500; }
+    .display { font-family: "Cormorant Garamond", serif; font-weight: 300; color: var(--black); }
+    .display--lg { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.2; }
+    .display--md { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.3; }
+    .display em { font-style: italic; color: var(--copper); }
+    .divider { width: 40px; height: 1px; background: var(--copper); margin-bottom: 2rem; }
+    .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; }
+    .back-btn { background: none; border: none; cursor: pointer; font-family: "DM Sans", sans-serif; font-size: 0.8rem; color: var(--gray); }
+    .back-btn:hover { color: var(--copper); }
+    .field { margin-bottom: 1.5rem; }
+    .field label { display: block; font-size: 0.75rem; color: var(--gray); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    input[type="text"], select, textarea { width: 100%; padding: 0.875rem 1.25rem; background: transparent; border: 1px solid var(--gray-light); border-radius: 2px; outline: none; font-family: "DM Sans", sans-serif; font-size: 0.95rem; color: var(--black); font-weight: 300; transition: border-color 0.2s; }
+    input[type="text"]:focus, select:focus, textarea:focus { border-color: var(--copper); }
+    textarea { resize: vertical; line-height: 1.7; }
+    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A8680' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; }
+    .btn { padding: 0.875rem 2.5rem; background: var(--black); color: var(--ivory); border: none; border-radius: 2px; font-family: "DM Sans", sans-serif; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+    .btn:hover:not(:disabled) { background: var(--copper); }
+    .btn:disabled { background: var(--gray-light); cursor: default; }
+    .btn--outline { background: transparent; color: var(--black); border: 1px solid var(--gray-light); }
+    .btn--outline:hover:not(:disabled) { border-color: var(--copper); color: var(--copper); background: transparent; }
+    .card { background: white; border: 1px solid var(--gray-light); border-radius: 4px; padding: 1.5rem; margin-bottom: 1rem; }
+    .card--question { border-left: 3px solid var(--copper); }
+    .card--suivi { border-left: 3px solid var(--gray-light); }
+    .card--suivi.answered { border-left-color: var(--green); }
+    .progress-wrap { margin-bottom: 2rem; }
+    .progress-track { height: 1px; background: var(--gray-light); position: relative; }
+    .progress-fill { position: absolute; top: 0; left: 0; height: 1px; background: var(--copper); transition: width 0.5s ease; }
+    .progress-labels { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.7rem; color: var(--gray); }
+    .badge { display: inline-block; padding: 0.2rem 0.75rem; border-radius: 20px; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; background: var(--copper-dim); color: var(--copper); border: 1px solid var(--copper); }
+    .tabs { display: flex; border-bottom: 1px solid var(--gray-light); margin-bottom: 2rem; }
+    .tab { padding: 0.75rem 1.5rem; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border-bottom: 2px solid transparent; color: var(--gray); background: none; border-top: none; border-left: none; border-right: none; font-family: "DM Sans", sans-serif; transition: all 0.2s; margin-bottom: -1px; }
+    .tab.active { color: var(--copper); border-bottom-color: var(--copper); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .result-section { background: var(--dark); border-radius: 4px; padding: 2rem; margin-bottom: 1.5rem; }
+    .result-section h3 { font-family: "Cormorant Garamond", serif; font-size: 1.3rem; font-weight: 400; color: var(--copper); margin-bottom: 1rem; }
+    .result-text { font-size: 0.88rem; color: #C8C4BF; line-height: 1.9; font-weight: 300; }
+    .result-text strong { color: var(--copper); font-weight: 500; }
+    .result-text h3, .result-text h4 { font-family: "Cormorant Garamond", serif; color: var(--copper); margin: 1.2rem 0 0.5rem; font-weight: 400; font-size: 1.1rem; }
+    .result-text p { margin-bottom: 0.75rem; }
+    .result-text ul, .result-text ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .result-text li { margin-bottom: 0.3rem; }
+    .mermaid-wrap { background: white; border-radius: 4px; padding: 1.5rem; margin-bottom: 1rem; overflow-x: auto; }
+    .erd-code { font-family: "DM Mono", monospace; font-size: 0.75rem; color: var(--gray); margin-top: 0.5rem; white-space: pre-wrap; background: var(--ivory); padding: 1rem; border-radius: 2px; }
+    .spinner { width: 28px; height: 28px; border: 2px solid var(--dark-border); border-top-color: var(--copper); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .copy-btn { background: none; border: 1px solid var(--dark-border); color: var(--gray-light); padding: 0.4rem 0.875rem; border-radius: 2px; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; font-family: "DM Sans", sans-serif; transition: all 0.2s; }
+    .copy-btn:hover { border-color: var(--copper); color: var(--copper); }
+    .status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--gray); margin-bottom: 1rem; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .dot--green { background: var(--green); }
+    .info-box { background: var(--copper-dim); border: 1px solid var(--copper); border-radius: 2px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: var(--black-soft); }
+    @media (max-width: 480px) { .screen { padding: 2rem 1.25rem; } .tabs { overflow-x: auto; } }
+  </style>
+</head>
+<body>
+
+<!-- ÉCRAN 1 — BRIEFING -->
+<div id="screen-brief" class="screen active">
+  <div class="inner">
+    <div class="nav"><span class="label">bev-ops · entretien</span></div>
+    <div class="divider"></div>
+    <h1 class="display display--lg" style="margin-bottom:0.5rem">Préparer<br><em>l'entretien.</em></h1>
+    <p style="font-size:0.9rem;color:var(--gray);margin-bottom:3rem;font-weight:300">Renseigne les informations du prospect pour charger son dossier.</p>
+    <div class="field">
+      <label>Prénom du prospect</label>
+      <input type="text" id="input-prenom" placeholder="Ex: Elisabeth" oninput="checkBriefForm()" />
+    </div>
+    <div class="field">
+      <label>Profil identifié</label>
+      <select id="input-profil" onchange="checkBriefForm()">
+        <option value="">Sélectionner...</option>
+        <option value="A">A — Clarification et Priorités</option>
+        <option value="B">B — Offre et Acquisition</option>
+        <option value="C">C — Produit / Application</option>
+        <option value="D">D — Automatisation et OS</option>
+        <option value="E">E — Cadrage opérationnel</option>
+        <option value="F">F — Audit complet premium</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Note de cadrage provisoire (depuis Notion)</label>
+      <textarea id="input-note" rows="10" placeholder="Colle ici la note de cadrage provisoire..." oninput="checkBriefForm()"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem">
+      <button class="btn" id="brief-next" disabled onclick="startEntretien()">Démarrer l'entretien →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ÉCRAN 2 — ENTRETIEN -->
+<div id="screen-entretien" class="screen">
+  <div class="inner">
+    <div class="nav">
+      <span class="label">bev-ops · entretien</span>
+      <button class="back-btn" onclick="goTo('brief')">← Recommencer</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;flex-wrap:wrap">
+      <h2 class="display display--md" id="entretien-titre"></h2>
+      <span class="badge" id="entretien-profil"></span>
+    </div>
+    <p style="font-size:0.85rem;color:var(--gray);margin-bottom:2rem;font-weight:300">Note les réponses obtenues. Ces informations alimenteront la note de cadrage et la proposition.</p>
+    <div class="progress-wrap">
+      <div class="progress-labels">
+        <span class="label">Questions principales</span>
+        <span id="progress-txt" style="font-size:0.7rem;color:var(--gray)"></span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+    <div id="questions-container"></div>
+    <div style="margin-top:1.5rem">
+      <p class="label" style="margin-bottom:0.75rem">Notes libres</p>
+      <textarea id="notes-libres" placeholder="Contexte additionnel, éléments importants notés pendant l'entretien..." rows="4"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="genererPhase1()">Générer note et proposition →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ÉCRAN 3 — GÉNÉRATION PHASE 1 -->
+<div id="screen-gen1" class="screen">
+  <div class="inner" style="justify-content:center;align-items:center;text-align:center">
+    <div class="divider" style="margin:0 auto 2rem"></div>
+    <p class="label" style="margin-bottom:1rem">bev-ops · analyse</p>
+    <h2 class="display display--md" style="margin-bottom:2rem">Analyse en cours...</h2>
+    <div class="spinner"></div>
+    <p style="color:var(--gray);font-size:0.85rem" id="loading-msg1">Lecture des notes d'entretien...</p>
+  </div>
+</div>
+
+<!-- ÉCRAN 4 — LIVRABLES PHASE 1 + QUESTIONS DE SUIVI -->
+<div id="screen-phase1" class="screen">
+  <div class="inner">
+    <div class="nav">
+      <span class="label">bev-ops · livrables</span>
+      <button class="back-btn" onclick="goTo('entretien')">← Retour entretien</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+      <h2 class="display display--md" id="phase1-titre"></h2>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('note', this)">Note de cadrage</button>
+      <button class="tab" onclick="switchTab('proposition', this)">Proposition</button>
+      <button class="tab" onclick="switchTab('suivi', this)">Questions de suivi</button>
+    </div>
+    <div class="tab-content active" id="tab-note">
+      <div class="result-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h3>Note de cadrage provisoire</h3>
+          <button class="copy-btn" onclick="copyEl('note-content')">Copier</button>
+        </div>
+        <div class="result-text" id="note-content"></div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-proposition">
+      <div class="result-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h3>Proposition commerciale</h3>
+          <button class="copy-btn" onclick="copyEl('proposition-content')">Copier</button>
+        </div>
+        <div class="result-text" id="proposition-content"></div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-suivi">
+      <div class="info-box">
+        Réponds aux questions ci-dessous — maintenant si l'entretien continue, ou plus tard après un échange écrit. Une fois toutes les réponses renseignées, génère le schéma ERD.
+      </div>
+      <div id="suivi-container"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:1.5rem">
+        <button class="btn" id="btn-erd" onclick="genererERD()">Générer le schéma ERD →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÉCRAN 5 — GÉNÉRATION ERD -->
+<div id="screen-gen2" class="screen">
+  <div class="inner" style="justify-content:center;align-items:center;text-align:center">
+    <div class="divider" style="margin:0 auto 2rem"></div>
+    <p class="label" style="margin-bottom:1rem">bev-ops · schéma</p>
+    <h2 class="display display--md" style="margin-bottom:2rem">Génération du schéma...</h2>
+    <div class="spinner"></div>
+    <p style="color:var(--gray);font-size:0.85rem">Analyse des entités et relations métier...</p>
+  </div>
+</div>
+
+<!-- ÉCRAN 6 — ERD FINAL -->
+<div id="screen-erd" class="screen">
+  <div class="inner">
+    <div class="nav">
+      <span class="label">bev-ops · schéma ERD</span>
+      <button class="back-btn" onclick="goTo('phase1')">← Retour livrables</button>
+    </div>
+    <h2 class="display display--md" style="margin-bottom:0.5rem" id="erd-titre"></h2>
+    <p style="font-size:0.85rem;color:var(--gray);margin-bottom:2rem;font-weight:300">Schéma généré à partir des informations complètes du dossier.</p>
+    <div class="result-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3>Schéma ERD</h3>
+        <button class="copy-btn" onclick="copyErd()">Copier le code Mermaid</button>
+      </div>
+      <div class="mermaid-wrap" id="erd-diagram"></div>
+      <details style="margin-top:1rem">
+        <summary style="font-size:0.75rem;color:var(--gray);cursor:pointer">Voir le code Mermaid</summary>
+        <div class="erd-code" id="erd-code-display"></div>
+      </details>
+    </div>
+    <div style="background:var(--dark-card);border:1px solid var(--dark-border);border-radius:4px;padding:1.5rem;margin-bottom:1.5rem">
+      <h3 style="font-family:'Cormorant Garamond',serif;color:var(--copper);font-size:1.1rem;font-weight:400;margin-bottom:0.75rem">Entités identifiées</h3>
+      <div class="result-text" id="erd-entites"></div>
+    </div>
+    <div style="display:flex;gap:1rem;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn--outline" onclick="goTo('brief')">Nouvel entretien</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({ startOnLoad: false, theme: "neutral" });
+window.mermaidLib = mermaid;
+</script>
+
+<script>
+const state = {
+  prenom: "", profil: "", noteProvisoire: "",
+  questions: [], reponses: {}, notesLibres: "",
+  questionsDesuivi: [], reponsesDesuivi: {},
+  livrables: { note: "", proposition: "", erd: "", entites: "" },
+};
+
+const PROFIL_LABELS = {
+  A: "Clarification et Priorités", B: "Offre et Acquisition",
+  C: "Produit / Application", D: "Automatisation et OS",
+  E: "Cadrage opérationnel", F: "Audit complet premium",
+};
+
+const QUESTIONS = {
+  A: ["Parmi les idées listées, laquelle génère déjà du revenu ?", "Quelles contraintes de temps ou financières sont à prendre en compte ?", "Qu'est-ce qui a bloqué la priorisation jusqu'ici ?", "Quel est l'objectif de CA à 6 mois ?", "Quels outils sont déjà en place ?"],
+  B: ["Quel est le profil exact du client idéal ?", "Quelle est la principale objection des prospects ?", "Quel canal a déjà fonctionné, même partiellement ?", "Quel est le panier moyen actuel ou visé ?", "Y a-t-il un système de suivi des prospects aujourd'hui ?"],
+  C: ["Quel est le cas d'usage principal sans lequel l'app ne sert à rien ?", "Qui sont les utilisateurs et leur niveau technique ?", "Y a-t-il des contraintes techniques ou d'intégration ?", "Quel est le budget et le délai envisagés ?", "Quelles données doivent circuler dans le système ?"],
+  D: ["Quelles tâches prennent le plus de temps chaque semaine ?", "Quels outils posent le plus de problème actuellement ?", "Y a-t-il des données sensibles à protéger ?", "Quelle est la tolérance au changement de l'équipe ?", "Quel serait le ROI attendu de l'automatisation ?"],
+  E: ["Quel est le livrable attendu précisément ?", "Quels sont les délais et contraintes du projet ?", "Y a-t-il une équipe ou des parties prenantes impliquées ?", "Qu'est-ce qui a déjà été essayé sans succès ?", "Quel est le budget alloué ?"],
+  F: ["Quel est le déclencheur qui a motivé ce rendez-vous maintenant ?", "Quels sont les 2-3 points les plus urgents à résoudre ?", "Qui sont les décisionnaires et quel est le processus de validation ?", "Quel est le budget global envisagé ?", "Quelle est la vision à 12-18 mois ?"],
+};
+
+// Navigation
+function goTo(id) {
+  document.querySelectorAll(".screen").forEach(s => {
+    s.classList.remove("visible");
+    setTimeout(() => s.classList.remove("active"), 300);
+  });
+  setTimeout(() => {
+    const next = document.getElementById("screen-" + id);
+    next.classList.add("active");
+    requestAnimationFrame(() => requestAnimationFrame(() => next.classList.add("visible")));
+  }, 300);
+}
+window.goTo = goTo;
+setTimeout(() => document.getElementById("screen-brief").classList.add("visible"), 100);
+
+// Écran 1
+function checkBriefForm() {
+  const ok = document.getElementById("input-prenom").value.trim().length > 0
+    && document.getElementById("input-profil").value
+    && document.getElementById("input-note").value.trim().length > 0;
+  document.getElementById("brief-next").disabled = !ok;
+}
+window.checkBriefForm = checkBriefForm;
+
+function startEntretien() {
+  state.prenom = document.getElementById("input-prenom").value.trim();
+  state.profil = document.getElementById("input-profil").value;
+  state.noteProvisoire = document.getElementById("input-note").value.trim();
+  state.questions = QUESTIONS[state.profil] || QUESTIONS.F;
+  state.reponses = {};
+  document.getElementById("entretien-titre").textContent = state.prenom;
+  document.getElementById("entretien-profil").textContent = PROFIL_LABELS[state.profil] || state.profil;
+  renderQuestions();
+  goTo("entretien");
+}
+window.startEntretien = startEntretien;
+
+// Écran 2
+function renderQuestions() {
+  const container = document.getElementById("questions-container");
+  container.innerHTML = "";
+  state.questions.forEach((q, i) => {
+    const card = document.createElement("div");
+    card.className = "card card--question";
+    card.innerHTML = `
+      <p style="font-size:0.7rem;color:var(--copper);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem">Question ${i + 1} / ${state.questions.length}</p>
+      <p style="font-size:1rem;color:var(--black);margin-bottom:1rem;font-weight:400">${q}</p>
+      <textarea placeholder="Réponse obtenue..." rows="3" oninput="updateProgress(this, ${i})"></textarea>
+    `;
+    container.appendChild(card);
+  });
+  updateProgressBar();
+}
+
+function updateProgress(ta, i) {
+  state.reponses[i] = ta.value;
+  updateProgressBar();
+}
+window.updateProgress = updateProgress;
+
+function updateProgressBar() {
+  const filled = Object.values(state.reponses).filter(v => v && v.trim().length > 0).length;
+  const pct = Math.round((filled / state.questions.length) * 100);
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-txt").textContent = filled + " / " + state.questions.length;
+}
+
+// Génération Phase 1
+async function genererPhase1() {
+  state.notesLibres = document.getElementById("notes-libres").value;
+  goTo("gen1");
+
+  const loadingMsgs = ["Lecture des notes d'entretien...", "Analyse du contexte...", "Rédaction de la note de cadrage...", "Calcul de la proposition..."];
+  let mi = 0;
+  const interval = setInterval(() => {
+    if (mi < loadingMsgs.length - 1) document.getElementById("loading-msg1").textContent = loadingMsgs[++mi];
+  }, 2500);
+
+  const qa = state.questions.map((q, i) => "Q: " + q + "\nR: " + (state.reponses[i] || "(non renseigné)")).join("\n\n");
+
+  const prompt = `Tu es Bev, consultante senior en cadrage business et product ops, fondatrice de bev-ops. Taux journalier : 400 euros/jour.
+
+Tu viens de réaliser un entretien de cadrage avec ${state.prenom} (profil : ${PROFIL_LABELS[state.profil]}).
+
+Note de cadrage provisoire (avant entretien) :
+${state.noteProvisoire}
+
+Notes d'entretien :
+${qa}
+
+${state.notesLibres ? "Informations complementaires :\n" + state.notesLibres : ""}
+
+Génère exactement 3 blocs séparés par les marqueurs suivants :
+
+===NOTE===
+Note de cadrage structurée :
+### 1. Contexte
+### 2. Besoins et enjeux
+### 3. Compréhension du besoin
+### 4. Périmètre
+### 5. Exclusions
+### 6. Fonctions principales
+### 7. Contraintes
+### 8. Prochaines étapes
+
+===PROPOSITION===
+Proposition commerciale en phases :
+**Phase 1 - Cadrage** : description - X jours - montant euros HT
+**Phase 2 - Implémentation** : description - X jours - montant euros HT
+**Phase 3 - Formation et livraison** : description - X jours - montant euros HT
+**Phase 4 - Support** : description - X jours - montant euros HT
+**Total : X jours - montant euros HT**
+Ce qui est inclus :
+Ce qui est exclu :
+
+===SUIVI===
+Liste 5 questions précises à poser pour compléter le dossier et pouvoir générer le schéma ERD. Ces questions doivent permettre d'identifier les entités, flux de données et relations du système à construire.
+Format : une question par ligne, numérotées 1 à 5.
+
+Règles : basé uniquement sur ce qui a été dit, jamais inventé, ton professionnel.`;
+
+  let raw = "";
+  try {
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 2500, messages: [{ role: "user", content: prompt }] }),
+    });
+    const data = await res.json();
+    raw = data.content?.map(b => b.text || "").join("") || "";
+  } catch (e) {
+    raw = "===NOTE===\nErreur de génération.\n===PROPOSITION===\nErreur.\n===SUIVI===\n1. Question de suivi non générée.";
+  }
+
+  clearInterval(interval);
+
+  // Parser
+  const parts = raw.split(/===PROPOSITION===|===SUIVI===/);
+  state.livrables.note = parts[0].replace("===NOTE===", "").trim();
+  state.livrables.proposition = (parts[1] || "").trim();
+  const suiviRaw = (parts[2] || "").trim();
+
+  // Parser les questions de suivi
+  state.questionsDesuivi = suiviRaw.split("\n")
+    .filter(l => l.trim().match(/^\d+\./))
+    .map(l => l.replace(/^\d+\.\s*/, "").trim());
+  state.reponsesDesuivi = {};
+
+  // Afficher
+  document.getElementById("phase1-titre").textContent = state.prenom + " · Note et proposition";
+  document.getElementById("note-content").innerHTML = renderMd(state.livrables.note);
+  document.getElementById("proposition-content").innerHTML = renderMd(state.livrables.proposition);
+  renderSuivi();
+  goTo("phase1");
+}
+window.genererPhase1 = genererPhase1;
+
+// Rendu questions de suivi
+function renderSuivi() {
+  const container = document.getElementById("suivi-container");
+  container.innerHTML = "";
+  state.questionsDesuivi.forEach((q, i) => {
+    const card = document.createElement("div");
+    card.className = "card card--suivi";
+    card.id = "suivi-card-" + i;
+    card.innerHTML = `
+      <p style="font-size:0.7rem;color:var(--gray);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem">Question de suivi ${i + 1}</p>
+      <p style="font-size:0.95rem;color:var(--black);margin-bottom:1rem;font-weight:400">${q}</p>
+      <textarea placeholder="Réponse obtenue par écrit ou pendant l'entretien..." rows="3" oninput="updateSuivi(this, ${i})"></textarea>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function updateSuivi(ta, i) {
+  state.reponsesDesuivi[i] = ta.value;
+  const card = document.getElementById("suivi-card-" + i);
+  if (ta.value.trim().length > 0) {
+    card.classList.add("answered");
+  } else {
+    card.classList.remove("answered");
+  }
+}
+window.updateSuivi = updateSuivi;
+
+// Génération ERD
+async function genererERD() {
+  goTo("gen2");
+
+  const suiviQA = state.questionsDesuivi.map((q, i) => "Q: " + q + "\nR: " + (state.reponsesDesuivi[i] || "(non renseigné)")).join("\n\n");
+  const entretienQA = state.questions.map((q, i) => "Q: " + q + "\nR: " + (state.reponses[i] || "(non renseigné)")).join("\n\n");
+
+  const prompt = `Tu es Bev, experte en architecture de données et product ops.
+
+Contexte du projet de ${state.prenom} (profil : ${PROFIL_LABELS[state.profil]}) :
+
+Note de cadrage :
+${state.livrables.note}
+
+Notes d'entretien :
+${entretienQA}
+
+Réponses aux questions de suivi :
+${suiviQA}
+
+Génère exactement 2 blocs séparés par le marqueur ===ENTITES=== :
+
+===ERD===
+Code Mermaid erDiagram uniquement (sans balises code).
+Inclus les entités métier réelles du projet avec leurs attributs principaux et les relations entre elles.
+Adapte le schéma au projet réel, pas un schéma générique.
+Utilise la syntaxe standard Mermaid erDiagram.
+
+===ENTITES===
+Pour chaque entité du schéma, explique en 1-2 phrases son rôle dans le système.
+Format : **NomEntite** : description du rôle.`;
+
+  let raw = "";
+  try {
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 2000, messages: [{ role: "user", content: prompt }] }),
+    });
+    const data = await res.json();
+    raw = data.content?.map(b => b.text || "").join("") || "";
+  } catch (e) {
+    raw = "===ERD===\nerDiagram\n  ERROR { string message }\n===ENTITES===\nErreur de génération.";
+  }
+
+  // Parser
+  const erdParts = raw.split("===ENTITES===");
+  const erdCode = erdParts[0].replace("===ERD===", "").replace(/```mermaid/g, "").replace(/```/g, "").trim();
+  state.livrables.erd = erdCode;
+  state.livrables.entites = (erdParts[1] || "").trim();
+
+  // Afficher
+  document.getElementById("erd-titre").textContent = state.prenom + " · Schéma ERD";
+  document.getElementById("erd-code-display").textContent = erdCode;
+  document.getElementById("erd-entites").innerHTML = renderMd(state.livrables.entites);
+
+  try {
+    const { svg } = await window.mermaidLib.render("erd-svg-" + Date.now(), erdCode);
+    document.getElementById("erd-diagram").innerHTML = svg;
+  } catch {
+    document.getElementById("erd-diagram").innerHTML = "<p style=\"color:var(--gray);font-size:0.85rem\">Le diagramme ne peut pas être affiché — copiez le code Mermaid ci-dessous et collez-le sur mermaid.live</p>";
+  }
+
+  goTo("erd");
+}
+window.genererERD = genererERD;
+
+// Tabs
+function switchTab(name, btn) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("tab-" + name).classList.add("active");
+}
+window.switchTab = switchTab;
+
+// Utils
+function renderMd(text) {
+  if (!text) return "";
+  return text
+    .replace(/^### (.+)$/gm, "<h4>$1</h4>")
+    .replace(/^## (.+)$/gm, "<h3>$1</h3>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/^- (.+)$/gm, "<li>$1</li>")
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/\n/g, "<br>")
+    .replace(/^(?!<)(.+)/, "<p>$1</p>");
+}
+
+function copyEl(id) {
+  const el = document.getElementById(id);
+  navigator.clipboard.writeText(el.innerText).then(() => {
+    const btn = el.closest(".result-section").querySelector(".copy-btn");
+    btn.textContent = "Copié !";
+    setTimeout(() => btn.textContent = "Copier", 2000);
+  });
+}
+window.copyEl = copyEl;
+
+function copyErd() {
+  navigator.clipboard.writeText(state.livrables.erd).then(() => {
+    const btn = document.querySelector("#screen-erd .copy-btn");
+    btn.textContent = "Copié !";
+    setTimeout(() => btn.textContent = "Copier le code Mermaid", 2000);
+  });
+}
+window.copyErd = copyErd;
+</script>
+</body>
+</html>
